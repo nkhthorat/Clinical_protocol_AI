@@ -1,0 +1,27 @@
+# Core data processing
+pymupdf
+pandas
+numpy
+
+# NLP / LLM pipeline support
+openai
+tiktoken
+
+# Data validation / schemas 
+pydantic
+
+# RAG / embeddings
+faiss-cpu
+sentence-transformers
+
+# API layer
+fastapi
+uvicorn
+
+# Utilities
+python-dotenv
+tqdm
+
+# Optional 
+ipykernel
+jupyter
