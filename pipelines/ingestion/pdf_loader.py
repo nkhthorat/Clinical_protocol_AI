@@ -1,7 +1,7 @@
 # pipelines/ingestion/pdf_loader.py
 
 from pipelines.utils import check_pymupdf
-print("here in pdf loader")
+
 check_pymupdf()
 
 import fitz
