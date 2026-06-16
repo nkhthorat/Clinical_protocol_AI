@@ -58,11 +58,11 @@ def save_rag(index, chunks, folder="rag_store"):
 # -----------------------------
 # Load RAG system
 # -----------------------------
-def load_rag(folder="rag_store"):
+def load_rag(index_path, chunks_path):
 
-    index = faiss.read_index(f"{folder}/index.faiss")
+    index = faiss.read_index(index_path)
 
-    with open(f"{folder}/chunks.json", "r") as f:
+    with open(chunks_path, "r") as f:
         chunks = json.load(f)
 
     return index, chunks

@@ -1,46 +1,80 @@
-from typing import List, Dict
+from pipelines.rag.embeddings import search
 
 
-# -----------------------------
-# Build context from chunks
-# -----------------------------
-def build_context(chunks: List[Dict]) -> str:
-    return "\n\n---\n\n".join([c["text"] for c in chunks])
+class ClinicalProtocolQA:
+    def __init__(self, index, chunks, llm=None):
+        self.index = index
+        self.chunks = chunks
+        self.llm = llm  # your Qwen wrapper
 
+    # -----------------------------
+    # STEP 1: Retrieve context
+    # -----------------------------
+    def retrieve(self, question, top_k=5):
+        results = search(
+            question,
+            self.index,
+            self.chunks,
+            top_k=top_k
+        )
+        return results
 
-# -----------------------------
-# Core QA function (RAG)
-# -----------------------------
-def answer_question(query: str, index, chunks, top_k=3):
+    # -----------------------------
+    # STEP 2: Build prompt safely
+    # -----------------------------
+    def build_prompt(self, question, retrieved_chunks):
 
-    # import here to avoid circular imports
-    from pipelines.rag.embeddings import search
+        # SAFE: dict → text extraction
+        context = "\n\n---\n\n".join(
+            chunk["text"] if isinstance(chunk, dict) else str(chunk)
+            for chunk in retrieved_chunks
+        )
 
-    # 1. retrieve relevant chunks
-    retrieved = search(query, index, chunks, top_k=top_k)
-
-    context = build_context(retrieved)
-
-    # 2. structured clinical prompt
-    prompt = f"""
+        prompt = f"""
 You are a clinical research assistant.
 
-Use ONLY the provided context to answer the question.
-Do NOT use external knowledge.
+Use ONLY the provided protocol context to answer.
 
-If the answer is a list, return bullet points.
-If the information is not present, say: "Not found in protocol".
-
-Be precise and clinical.
+RULES:
+- Do NOT use external knowledge
+- If information is missing, say "Not found in protocol"
+- Be precise and clinical
+- Prefer bullet points for lists
+- Do not hallucinate
 
 ---------------- CONTEXT ----------------
+
 {context}
+
 ----------------------------------------
 
 QUESTION:
-{query}
+{question}
 
 ANSWER:
-"""
+""".strip()
 
-    return prompt
+        return prompt
+
+    # -----------------------------
+    # STEP 3: Call LLM
+    # -----------------------------
+    def generate(self, prompt):
+        if self.llm is None:
+            raise ValueError("LLM not initialized in ClinicalProtocolQA")
+
+        return self.llm.generate(prompt)
+
+    # -----------------------------
+    # MAIN API
+    # -----------------------------
+    def ask(self, question, top_k=5):
+
+        # 1. Retrieve
+        retrieved_chunks = self.retrieve(question, top_k=top_k)
+
+        # 2. Build prompt
+        prompt = self.build_prompt(question, retrieved_chunks)
+
+        # 3. Generate answer
+        return self.generate(prompt)
